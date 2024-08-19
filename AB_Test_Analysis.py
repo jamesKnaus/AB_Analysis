@@ -7,7 +7,7 @@ from scipy.stats import shapiro
 from scipy.stats import mannwhitneyu
 
 # Load the data
-df = pd.read_csv('../AB_Test/AB_Test_Results.csv')
+df = pd.read_csv('/Users/jamesknaus/Development/AB_Analysis/AB_Test_Results.csv')
 
 # Display basic information about the dataset
 print(df.info())
@@ -40,6 +40,16 @@ df_agg = df.groupby(['USER_ID', 'VARIANT_NAME'])['REVENUE'].sum().reset_index()
 print("\nAfter cleaning and aggregation:")
 print(df_agg.head())
 print(df_agg.info())
+
+control_users = df_agg[df_agg['VARIANT_NAME'] == 'control']['USER_ID'].nunique()
+variant_users = df_agg[df_agg['VARIANT_NAME'] == 'variant']['USER_ID'].nunique()
+
+# Calculate and print the percentage split
+control_percentage = (control_users / total_users) * 100
+variant_percentage = (variant_users / total_users) * 100
+print(f"\nPercentage split:")
+print(f"Control group: {control_percentage:.2f}%")
+print(f"Variant group: {variant_percentage:.2f}%")
 
 # Set the style for the plots
 sns.set_style("whitegrid")
@@ -199,38 +209,46 @@ print(f"Shapiro-Wilk test for variant group: statistic={stat:.4f}, p-value={p_va
 
 # Test for normality in the control group
 stat, p_value = shapiro(df_agg.loc[df_agg.VARIANT_NAME == 'control', 'REVENUE'])
-# print(f"Shapiro-Wilk test for control group: statistic={stat:.4f}, p-value={p_value:.4f}")
+print(f"Shapiro-Wilk test for control group: statistic={stat:.4f}, p-value={p_value:.4f}")
 
+# Calculate the proportion of zero revenue values
 zero_proportion = (df_agg['REVENUE'] == 0).mean()
 print(f"Proportion of zero values: {zero_proportion:.2%}")
 
+# Perform Mann-Whitney U test for all users
 statistic, p_value = mannwhitneyu(
     df_agg.loc[df_agg.VARIANT_NAME == 'variant', 'REVENUE'],
     df_agg.loc[df_agg.VARIANT_NAME == 'control', 'REVENUE']
 )
 print(f"Mann-Whitney U test for all users: statistic={statistic:.4f}, p-value={p_value:.4f}")
 
+# Perform Mann-Whitney U test for paying users only
 statistic, p_value = mannwhitneyu(
     df_agg.loc[(df_agg.VARIANT_NAME == 'variant') & (df_agg.REVENUE > 0), 'REVENUE'],
     df_agg.loc[(df_agg.VARIANT_NAME == 'control') & (df_agg.REVENUE > 0), 'REVENUE']
 )
 print(f"Mann-Whitney U test for paying users: statistic={statistic:.4f}, p-value={p_value:.4f}")
 
+# Define function to generate bootstrap samples
 def get_bootstrap_samples(data, n_samples=1000):
     indices = np.random.randint(0, len(data), (n_samples, len(data)))
     samples = data[indices]
     return samples
 
+# Define function to calculate confidence intervals
 def stat_intervals(stat, alpha=0.05):
     boundaries = np.percentile(stat, [100 * alpha / 2., 100 * (1 - alpha / 2.)])
     return boundaries
 
+# Generate bootstrap samples for control and variant groups (all users)
 control = get_bootstrap_samples(df_agg.loc[df_agg.VARIANT_NAME == 'control', 'REVENUE'].values, 10000)
 variant = get_bootstrap_samples(df_agg.loc[df_agg.VARIANT_NAME == 'variant', 'REVENUE'].values, 10000)
 
+# Generate bootstrap samples for control and variant groups (paying users only)
 control_paid = get_bootstrap_samples(df_agg.loc[(df_agg.VARIANT_NAME == 'control') & (df_agg.REVENUE > 0), 'REVENUE'].values, 10000)
 variant_paid = get_bootstrap_samples(df_agg.loc[(df_agg.VARIANT_NAME == 'variant') & (df_agg.REVENUE > 0), 'REVENUE'].values, 10000)
 
+# Plot sample mean distribution for all users
 plt.figure(figsize=(10, 5))
 sns.kdeplot(np.mean(control, axis=1), shade=True, label='control')
 sns.kdeplot(np.mean(variant, axis=1), shade=True, label='variant')
@@ -238,6 +256,7 @@ plt.title('Sample mean distribution for all users')
 plt.legend()
 plt.show()
 
+# Plot sample mean distribution for paying users
 plt.figure(figsize=(10, 5))
 sns.kdeplot(np.mean(control_paid, axis=1), shade=True, label='control')
 sns.kdeplot(np.mean(variant_paid, axis=1), shade=True, label='variant')
@@ -245,6 +264,7 @@ plt.title('Sample mean distribution for paying users')
 plt.legend()
 plt.show()
 
+# Define function to plot distribution of differences and confidence intervals
 def plot_distribution_and_stat_intervals(variant, control, title, alpha=0.05):
     plt.figure(figsize=(10, 5))
     points = sns.kdeplot(variant - control, shade=False).get_lines()[0].get_data()
@@ -261,5 +281,8 @@ def plot_distribution_and_stat_intervals(variant, control, title, alpha=0.05):
     plt.show()
     return ci
 
+# Plot distribution of differences and confidence intervals for all users
 ci_all = plot_distribution_and_stat_intervals(np.mean(variant, axis=1), np.mean(control, axis=1), 'All Users')
+
+# Plot distribution of differences and confidence intervals for paying users
 ci_paid = plot_distribution_and_stat_intervals(np.mean(variant_paid, axis=1), np.mean(control_paid, axis=1), 'Paying Users')

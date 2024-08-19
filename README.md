@@ -22,6 +22,6 @@ This project demonstrates a comprehensive A/B test analysis using Python to eval
 
 ## Detailed Write-up
 
-Refer to the [Full Project Analysis](https://www.notion.so/your-page-link-here](https://jamesknaus.notion.site/A-B-Testing-Optimizing-Conversion-Rates-for-Revenue-Growth-57a784c219784a44915c987ca5d0990c?pvs=4)) in Notion for a comprehensive breakdown of the analysis process, methodology, and business insights.
+Refer to the [Full Project Analysis](https://jamesknaus.notion.site/A-B-Testing-Optimizing-Conversion-Rates-for-Revenue-Growth-57a784c219784a44915c987ca5d0990c?pvs=4) in Notion for a comprehensive breakdown of the analysis process, methodology, and business insights.
 
 
